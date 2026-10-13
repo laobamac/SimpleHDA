@@ -12,7 +12,9 @@ import json
 import plistlib
 
 root = Path(__file__).resolve().parents[1]
-version = plistlib.loads((root / 'Info.plist').read_bytes())['CFBundleVersion']
+source_info = plistlib.loads((root / 'Info.plist').read_bytes())
+version = source_info['CFBundleVersion']
+lilu_version = source_info['OSBundleLibraries']['as.vit9696.Lilu']
 def uid(s): return hashlib.sha1(s.encode()).hexdigest()[:24].upper()
 def q(s): return json.dumps(str(s))
 objects = []
@@ -75,5 +77,5 @@ p = root / 'SimpleHDA.xcodeproj'
 (p / 'xcshareddata/xcschemes/SimpleHDA.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2650" version="1.3"><BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{target}" BuildableName="SimpleHDA.kext" BlueprintName="SimpleHDA" ReferencedContainer="container:SimpleHDA.xcodeproj"/></BuildActionEntry></BuildActionEntries></BuildAction><LaunchAction buildConfiguration="Debug"/><ProfileAction buildConfiguration="Release"/><AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>
 ''')
-info = {'CFBundleDevelopmentRegion':'en','CFBundleExecutable':'$(EXECUTABLE_NAME)','CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','CFBundleInfoDictionaryVersion':'6.0','CFBundleName':'SimpleHDA','CFBundlePackageType':'KEXT','CFBundleShortVersionString':version,'CFBundleVersion':version,'OSBundleRequired':'Root', 'NSHumanReadableCopyright':'Copyright © 2026 laobamac. All rights reserved.', 'OSBundleLibraries': {'as.vit9696.Lilu':'1.7.3', 'com.apple.kpi.bsd':'10.0.0','com.apple.kpi.iokit':'10.0.0','com.apple.kpi.libkern':'10.0.0','com.apple.kpi.mach':'10.0.0','com.apple.kpi.unsupported':'10.0.0'}, 'IOKitPersonalities': {'SimpleHDA': {'CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','IOClass':'SimpleHDA','IOMatchCategory':'SimpleHDA','IOProviderClass':'IOResources','IOResourceMatch':'IOKit'}}}
+info = {'CFBundleDevelopmentRegion':'en','CFBundleExecutable':'$(EXECUTABLE_NAME)','CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','CFBundleInfoDictionaryVersion':'6.0','CFBundleName':'SimpleHDA','CFBundlePackageType':'KEXT','CFBundleShortVersionString':version,'CFBundleVersion':version,'OSBundleRequired':'Root', 'NSHumanReadableCopyright':'Copyright © 2026 laobamac. All rights reserved.', 'OSBundleLibraries': {'as.vit9696.Lilu':lilu_version, 'com.apple.kpi.bsd':'10.0.0','com.apple.kpi.iokit':'10.0.0','com.apple.kpi.libkern':'10.0.0','com.apple.kpi.mach':'10.0.0','com.apple.kpi.unsupported':'10.0.0'}, 'IOKitPersonalities': {'SimpleHDA': {'CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','IOClass':'SimpleHDA','IOMatchCategory':'SimpleHDA','IOProviderClass':'IOResources','IOResourceMatch':'IOKit'}}}
 (root / 'Info.plist').write_bytes(plistlib.dumps(info))

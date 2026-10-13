@@ -33,7 +33,7 @@ SimpleHDA is a Lilu plug-in that restores the original AppleHDA stack through Op
 | System | macOS Tahoe 26 / Darwin 25.x |
 | Architecture | Intel / AMD x86_64 |
 | Bootloader | OpenCore |
-| Dependencies | Lilu ≥ 1.7.3 and AppleALC |
+| Dependencies | Lilu ≥ 1.7.1 and AppleALC |
 | Configuration | A working `alcid` or `layout-id`, plus `keepsyms=1` |
 
 ## Installation

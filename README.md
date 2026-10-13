@@ -33,7 +33,7 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 | 系统 | macOS Tahoe 26 / Darwin 25.x |
 | 架构 | Intel / AMD x86_64 |
 | 引导 | OpenCore |
-| 依赖 | Lilu ≥ 1.7.3、AppleALC |
+| 依赖 | Lilu ≥ 1.7.1、AppleALC |
 | 配置 | 有效的 `alcid` 或 `layout-id`，启动参数 `keepsyms=1` |
 
 ## 安装

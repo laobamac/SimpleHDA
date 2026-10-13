@@ -1,6 +1,7 @@
 {
   "Lilu": {
-    "commit": "0515f40b7f2a096adc85e832a4c6104fbd07f936",
+    "commit": "dc01cb583295ceded4f42a6310a15e3abac1c025",
+    "tag": "1.7.1",
     "url": "https://github.com/acidanthera/Lilu"
   },
   "MacKernelSDK": {

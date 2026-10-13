@@ -24,7 +24,8 @@ def require(condition, message):
     if not condition:
         raise SystemExit(message)
 
-version = plistlib.loads((root / 'Info.plist').read_bytes())['CFBundleVersion']
+source_info = plistlib.loads((root / 'Info.plist').read_bytes())
+version = source_info['CFBundleVersion']
 if args.source:
     manifest = json.loads((root / 'Resources/AppleHDA.json').read_text())
     bundle = root / 'Resources/AppleHDA.kext'
@@ -39,6 +40,7 @@ if args.configuration:
     bundle = root / 'Build' / args.configuration / 'SimpleHDA.kext'
     info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
     require(info['CFBundleVersion'] == version == info['CFBundleShortVersionString'], 'Built version differs')
+    require(info['OSBundleLibraries'] == source_info['OSBundleLibraries'], 'Built dependency requirements differ')
     require(info['CFBundleIdentifier'] == 'cn.laobamac.SimpleHDA', 'Built identifier differs')
     require(info['IOKitPersonalities']['SimpleHDA']['IOResourceMatch'] == 'IOKit', 'Incorrect startup match')
     require(info['IOKitPersonalities']['SimpleHDA']['IOProviderClass'] == 'IOResources', 'Incorrect startup provider')
