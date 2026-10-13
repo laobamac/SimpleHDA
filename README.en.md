@@ -38,7 +38,7 @@ SimpleHDA is a Lilu plug-in that restores the original AppleHDA stack through Op
 
 ## Installation
 
-1. Extract `SimpleHDA-1.0.0-REL.zip` and copy `SimpleHDA.kext` to `EFI/OC/Kexts`.
+1. Download the `RELEASE` package from [Releases](https://github.com/laobamac/SimpleHDA/releases), extract it and copy `SimpleHDA.kext` to `EFI/OC/Kexts`.
 2. Add it to `Kernel → Add` in this order: **Lilu → AppleALC → SimpleHDA**. The package includes an example entry in `OpenCore-Kernel-Add.plist`.
 3. Add `keepsyms=1` and retain the working AppleALC, layout and ACPI configuration for your machine.
 4. Optionally install `SimpleHDA-HAL-1.0.0.pkg`.
@@ -140,13 +140,15 @@ zsh Tools/build.zsh
 python3 Tools/package.py
 ```
 
-Packages are written to `Dist`, with the Release driver at the top level, a Debug driver in `Debug`, the HAL installer and SHA-256 manifests. To build only Release, run `zsh Tools/build.zsh Release`.
+Separate `DEBUG` and `RELEASE` packages are written to `Dist`. Each includes the HAL installer and SHA-256 manifest. Use `RELEASE` for daily use and `DEBUG` for troubleshooting. To build only Release, run `zsh Tools/build.zsh Release`.
 
 For Xcode, run `zsh Tools/prepare.zsh` once before opening `SimpleHDA.xcodeproj`. Press `⌘B` to build. The build phase also prepares dependencies and generated sources automatically.
 
 Dependencies are pinned in `VendorVersions.json`; the original payload is in `Resources/AppleHDA.kext`. `Info.plist` supplies the version, and the bundle identifier is `cn.laobamac.SimpleHDA`.
 
-Each push updates the fixed `pre` prerelease with the latest assets. Publishing a formal Release automatically builds and uploads the REL package. Use `1.0.0` or `v1.0.0` as the tag, matching `Info.plist`.
+Each push updates the `v1.0.0-alpha` prerelease, keeping only the latest prerelease and assets. Release notes list the five most recent commits. Filenames include the short commit hash, such as `SimpleHDA-Tahoe-v1.0.0-RELEASE-alpha-abcdef0.zip`.
+
+Publishing a formal Release automatically uploads `DEBUG` and `RELEASE` packages, such as `SimpleHDA-Tahoe-v1.0.0-RELEASE.zip`. Use `1.0.0` or `v1.0.0` as the tag, matching `Info.plist`.
 
 ## Acknowledgments
 

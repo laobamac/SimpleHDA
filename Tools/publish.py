@@ -26,14 +26,15 @@ sha = os.environ['GITHUB_SHA']
 api = os.environ.get('GITHUB_API_URL', 'https://api.github.com')
 token = os.environ['GH_TOKEN']
 version = plistlib.loads((root / 'Info.plist').read_bytes())['CFBundleVersion']
-name = f'SimpleHDA-{version}-{args.channel.upper()}'
-files = [root / 'Dist' / f'{name}.zip', root / 'Dist' / f'{name}.sha256']
-if not all(path.is_file() for path in files):
-    raise SystemExit('Release assets are missing')
 if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
     raise SystemExit('Invalid repository name')
 if not re.fullmatch(r'[0-9a-fA-F]{40}', sha):
     raise SystemExit('Invalid commit SHA')
+suffix = f'-alpha-{sha[:7]}' if args.channel == 'pre' else ''
+names = [f'SimpleHDA-Tahoe-v{version}-{configuration}{suffix}' for configuration in ('DEBUG', 'RELEASE')]
+files = [root / 'Dist' / f'{name}.zip' for name in names]
+if not all(path.is_file() for path in files):
+    raise SystemExit('Release assets are missing')
 base = f'/repos/{repository}'
 
 def request(method, path, data=None, missing=False):
@@ -50,6 +51,16 @@ def request(method, path, data=None, missing=False):
             return None
         raise SystemExit(f'GitHub {method} {path} failed: HTTP {error.code}') from None
 
+def pages(path):
+    results = []
+    page = 1
+    while True:
+        batch = request('GET', path + f'?per_page=100&page={page}')
+        results.extend(batch)
+        if len(batch) < 100:
+            return results
+        page += 1
+
 if args.channel == 'rel':
     event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     release = event.get('release', {})
@@ -60,16 +71,25 @@ if args.channel == 'rel':
     if current['tag_name'] != tag or current['prerelease'] or current['draft']:
         raise SystemExit('Release state changed during the build')
 else:
-    tag = 'pre'
+    tag = f'v{version}-alpha'
     encoded = urllib.parse.quote(tag, safe='')
+    current = request('GET', base + '/releases/tags/' + encoded, missing=True)
+    if current and (not current['prerelease'] or current['draft']):
+        raise SystemExit('Alpha tag is already used by a formal or draft release')
     ref = request('GET', base + '/git/ref/tags/' + encoded, missing=True)
     if ref:
         request('PATCH', base + '/git/refs/tags/' + encoded, {'sha': sha, 'force': True})
     else:
-        request('POST', base + '/git/refs', {'ref': 'refs/tags/pre', 'sha': sha})
-    current = request('GET', base + '/releases/tags/' + encoded, missing=True)
-    description = f'SimpleHDA {version} development build.\n\nCommit: `{sha}`\n'
-    values = {'tag_name': tag, 'target_commitish': sha, 'name': 'SimpleHDA PRE',
+        request('POST', base + '/git/refs', {'ref': 'refs/tags/' + tag, 'sha': sha})
+    commits = request('GET', base + f'/commits?sha={sha}&per_page=5')
+    repository_url = os.environ.get('GITHUB_SERVER_URL', 'https://github.com') + '/' + repository
+    changes = []
+    for commit in commits:
+        subject = commit['commit']['message'].splitlines()[0]
+        subject = re.sub(r'([\\`*_{}\[\]<>#|])', r'\\\1', subject)
+        changes.append(f'- [`{commit["sha"][:7]}`]({repository_url}/commit/{commit["sha"]}) {subject}')
+    description = 'Development build for macOS Tahoe.\n\n' + '\n'.join(changes) + '\n'
+    values = {'tag_name': tag, 'target_commitish': sha, 'name': tag,
               'body': description, 'draft': False, 'prerelease': True, 'make_latest': 'false'}
     if current:
         current = request('PATCH', base + '/releases/' + str(current['id']), values)
@@ -78,15 +98,13 @@ else:
 subprocess.run(['gh', 'release', 'upload', tag, *(str(path) for path in files), '--repo', repository, '--clobber'], check=True)
 if args.channel == 'pre':
     keep = {path.name for path in files}
-    page = 1
-    assets = []
-    while True:
-        batch = request('GET', base + f'/releases/{current["id"]}/assets?per_page=100&page={page}')
-        assets.extend(batch)
-        if len(batch) < 100:
-            break
-        page += 1
-    for asset in assets:
+    for asset in pages(base + f'/releases/{current["id"]}/assets'):
         if asset['name'] not in keep:
             request('DELETE', base + '/releases/assets/' + str(asset['id']))
-print(f'Published {tag}: {name}')
+    for release in pages(base + '/releases'):
+        old_tag = release['tag_name']
+        managed = old_tag == 'pre' or re.fullmatch(r'v\d+\.\d+\.\d+-alpha', old_tag)
+        if release['id'] != current['id'] and release['prerelease'] and not release['draft'] and managed:
+            request('DELETE', base + '/releases/' + str(release['id']))
+            request('DELETE', base + '/git/refs/tags/' + urllib.parse.quote(old_tag, safe=''), missing=True)
+print(f'Published {tag}: ' + ', '.join(names))

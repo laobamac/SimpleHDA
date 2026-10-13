@@ -38,7 +38,7 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 
 ## 安装
 
-1. 解压 `SimpleHDA-1.0.0-REL.zip`，将 `SimpleHDA.kext` 放入 `EFI/OC/Kexts`。
+1. 在 [Releases](https://github.com/laobamac/SimpleHDA/releases) 下载并解压 `RELEASE` 包，将 `SimpleHDA.kext` 放入 `EFI/OC/Kexts`。
 2. 在 `Kernel → Add` 添加驱动，顺序为 **Lilu → AppleALC → SimpleHDA**。包内附有 `OpenCore-Kernel-Add.plist` 条目示例。
 3. 加入 `keepsyms=1`，保留这台机器原先有效的 AppleALC、layout 和 ACPI 配置。
 4. 可选：安装 `SimpleHDA-HAL-1.0.0.pkg`。
@@ -140,13 +140,15 @@ zsh Tools/build.zsh
 python3 Tools/package.py
 ```
 
-产物位于 `Dist`，默认驱动为 Release，Debug 驱动放在 `Debug` 目录，另附 HAL 安装包及 SHA-256 校验清单。仅编译 Release：`zsh Tools/build.zsh Release`。
+产物位于 `Dist`，`DEBUG` 和 `RELEASE` 分别打包，每包均附 HAL 安装包及 SHA-256 校验清单。日常使用选择 `RELEASE`，排查问题选择 `DEBUG`。仅编译 Release：`zsh Tools/build.zsh Release`。
 
 使用 Xcode 时，首次运行 `zsh Tools/prepare.zsh`，再打开 `SimpleHDA.xcodeproj`。按 `⌘B` 构建，构建阶段也会自动准备依赖和生成源码。
 
 依赖固定在 `VendorVersions.json`，原版载荷位于 `Resources/AppleHDA.kext`。版本号以 `Info.plist` 为准，标识为 `cn.laobamac.SimpleHDA`。
 
-推送自动更新固定的 `pre` 预发布，仅保留最新附件。发布正式 Release 后自动构建并上传 REL 包；tag 使用与 `Info.plist` 一致的 `1.0.0` 或 `v1.0.0`。
+推送自动更新 `v1.0.0-alpha` 预发布，只保留最新预发布及附件。发布说明列出最近 5 条提交，文件名包含提交短哈希，例如 `SimpleHDA-Tahoe-v1.0.0-RELEASE-alpha-abcdef0.zip`。
+
+发布正式 Release 后自动上传 `DEBUG`、`RELEASE` 包，例如 `SimpleHDA-Tahoe-v1.0.0-RELEASE.zip`；tag 使用与 `Info.plist` 一致的 `1.0.0` 或 `v1.0.0`。
 
 ## 致谢
 
