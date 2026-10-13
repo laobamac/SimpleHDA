@@ -1,0 +1,15 @@
+{
+  "Lilu": {
+    "commit": "0515f40b7f2a096adc85e832a4c6104fbd07f936",
+    "url": "https://github.com/acidanthera/Lilu"
+  },
+  "MacKernelSDK": {
+    "commit": "3f750085caa17ec3a7880f11c11bf4f48cd6a164",
+    "url": "https://github.com/acidanthera/MacKernelSDK"
+  },
+  "xnu": {
+    "commit": "ac9718fb1af618d5ce8678d0dc6e8a58f252216f",
+    "tag": "xnu-12377.121.6",
+    "url": "https://github.com/apple-oss-distributions/xnu"
+  }
+}
