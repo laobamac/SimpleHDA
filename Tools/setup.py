@@ -23,7 +23,7 @@ for name, spec in versions.items():
     target = root / 'Vendor' / name
     if not (target / '.git').exists():
         target.mkdir(parents=True, exist_ok=True)
-        if any(target.iterdir()):
+        if any(not path.is_dir() or path.is_symlink() for path in target.rglob('*')):
             raise SystemExit(f'Dependency directory is not a Git checkout: {target}')
         subprocess.run(['git', 'init', '-q', str(target)], check=True)
         subprocess.run(['git', '-C', str(target), 'remote', 'add', 'origin', spec['url']], check=True)
