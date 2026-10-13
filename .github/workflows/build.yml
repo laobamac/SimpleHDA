@@ -51,8 +51,16 @@ jobs:
           if os.environ['RELEASE_TAG'] not in (version, f'v{version}'):
               raise SystemExit('Release tag must match Info.plist')
           PY
-      - name: Build and verify
-        run: zsh Tools/build.zsh
+      - name: Build directly from Xcode project
+        run: |
+          mkdir -p Build
+          if ! xcodebuild -project SimpleHDA.xcodeproj -scheme SimpleHDA -configuration Debug -derivedDataPath Build/DerivedData build > Build/xcode-Debug.log 2>&1; then
+            tail -n 100 Build/xcode-Debug.log
+            exit 1
+          fi
+          python3 Tools/verify.py --configuration Debug
+      - name: Build Release and HAL installer
+        run: zsh Tools/build.zsh Release
       - name: Package
         env:
           CHANNEL: ${{ steps.channel.outputs.value }}

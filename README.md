@@ -58,6 +58,63 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 
 `alcid` 使用自己声卡的有效值；通过设备属性设置 layout 时，无需重复添加。
 
+<details>
+<summary>shda-lang 支持的语言（41 种）</summary>
+
+用法：`shda-lang=ja`。默认 `zh_CN`，不设置此参数即可使用简体中文。修改后重启生效。
+
+| 值 | 语言 |
+| :--- | :--- |
+| `ar` | 阿拉伯语 |
+| `ca` | 加泰罗尼亚语 |
+| `cs` | 捷克语 |
+| `da` | 丹麦语 |
+| `de` | 德语 |
+| `el` | 希腊语 |
+| `en` | 英语 |
+| `en_AU` | 英语（澳大利亚） |
+| `en_GB` | 英语（英国） |
+| `es` | 西班牙语 |
+| `es_419` | 西班牙语（拉丁美洲） |
+| `es_US` | 西班牙语（美国） |
+| `fi` | 芬兰语 |
+| `fr` | 法语 |
+| `fr_CA` | 法语（加拿大） |
+| `he` | 希伯来语 |
+| `hi` | 印地语 |
+| `hr` | 克罗地亚语 |
+| `hu` | 匈牙利语 |
+| `id` | 印度尼西亚语 |
+| `it` | 意大利语 |
+| `ja` | 日语 |
+| `ko` | 韩语 |
+| `ms` | 马来语 |
+| `nl` | 荷兰语 |
+| `no` | 挪威语 |
+| `pl` | 波兰语 |
+| `pt_BR` | 葡萄牙语（巴西） |
+| `pt_PT` | 葡萄牙语（葡萄牙） |
+| `ro` | 罗马尼亚语 |
+| `ru` | 俄语 |
+| `sk` | 斯洛伐克语 |
+| `sl` | 斯洛文尼亚语 |
+| `sv` | 瑞典语 |
+| `th` | 泰语 |
+| `tr` | 土耳其语 |
+| `uk` | 乌克兰语 |
+| `vi` | 越南语 |
+| `zh_CN` | 简体中文（默认） |
+| `zh_HK` | 繁体中文（香港） |
+| `zh_TW` | 繁体中文（台湾） |
+
+值不区分大小写，`-` 与 `_` 等价，例如 `zh-CN` 与 `zh_CN`。
+
+中文别名：`zh-Hans`、`zh-Hans-CN` → `zh_CN`；`zh-Hant`、`zh-Hant-TW` → `zh_TW`；`zh-Hant-HK` → `zh_HK`。
+
+区域值未匹配时会尝试基础语言，例如 `en_US` → `en`、`ja_JP` → `ja`。仍无法匹配时使用默认语言。
+
+</details>
+
 ## HAL
 
 HAL 为 CoreAudio 提供 AppleHDA 专用属性与控制接口。驱动自动检测：**已安装就启用，未安装就使用普通 IOAudio 路径**。两种情况都无需设置开关。
@@ -85,7 +142,9 @@ python3 Tools/package.py
 
 产物位于 `Dist`，默认驱动为 Release，Debug 驱动放在 `Debug` 目录，另附 HAL 安装包及 SHA-256 校验清单。仅编译 Release：`zsh Tools/build.zsh Release`。
 
-依赖固定在 `VendorVersions.json`，原版载荷位于 `Resources/AppleHDA.kext`。准备依赖后可用 `SimpleHDA.xcodeproj` 构建；版本号以 `Info.plist` 为准，标识为 `cn.laobamac.SimpleHDA`。
+使用 Xcode 时，首次运行 `zsh Tools/prepare.zsh`，再打开 `SimpleHDA.xcodeproj`。按 `⌘B` 构建，构建阶段也会自动准备依赖和生成源码。
+
+依赖固定在 `VendorVersions.json`，原版载荷位于 `Resources/AppleHDA.kext`。版本号以 `Info.plist` 为准，标识为 `cn.laobamac.SimpleHDA`。
 
 推送自动更新固定的 `pre` 预发布，仅保留最新附件。发布正式 Release 后自动构建并上传 REL 包；tag 使用与 `Info.plist` 一致的 `1.0.0` 或 `v1.0.0`。
 

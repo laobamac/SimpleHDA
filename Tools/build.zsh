@@ -10,10 +10,7 @@ set -euo pipefail
 cd "${0:A:h:h}"
 export PYTHONDONTWRITEBYTECODE=1
 mkdir -p Build
-python3 Tools/setup.py
-python3 Tools/verify.py --source
-python3 Tools/prepare_vendor.py
-python3 Tools/prepare_payload.py
+zsh Tools/prepare.zsh
 python3 Tools/generate_project.py
 SIMPLEHDA_CONFIGS=("$@")
 (( $# )) || SIMPLEHDA_CONFIGS=(Debug Release)

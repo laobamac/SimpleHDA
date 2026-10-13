@@ -58,6 +58,63 @@ Remove other AppleHDA restoration solutions or root patches before installation 
 
 Use the appropriate `alcid` for your codec. If the layout is configured through device properties, an additional alcid argument is unnecessary.
 
+<details>
+<summary>Languages supported by shda-lang (41 locales)</summary>
+
+Usage: `shda-lang=ja`. The default is `zh_CN`; omit the argument to use Simplified Chinese. Reboot after changing it.
+
+| Value | Language |
+| :--- | :--- |
+| `ar` | Arabic |
+| `ca` | Catalan |
+| `cs` | Czech |
+| `da` | Danish |
+| `de` | German |
+| `el` | Greek |
+| `en` | English |
+| `en_AU` | English (Australia) |
+| `en_GB` | English (United Kingdom) |
+| `es` | Spanish |
+| `es_419` | Spanish (Latin America) |
+| `es_US` | Spanish (United States) |
+| `fi` | Finnish |
+| `fr` | French |
+| `fr_CA` | French (Canada) |
+| `he` | Hebrew |
+| `hi` | Hindi |
+| `hr` | Croatian |
+| `hu` | Hungarian |
+| `id` | Indonesian |
+| `it` | Italian |
+| `ja` | Japanese |
+| `ko` | Korean |
+| `ms` | Malay |
+| `nl` | Dutch |
+| `no` | Norwegian |
+| `pl` | Polish |
+| `pt_BR` | Portuguese (Brazil) |
+| `pt_PT` | Portuguese (Portugal) |
+| `ro` | Romanian |
+| `ru` | Russian |
+| `sk` | Slovak |
+| `sl` | Slovenian |
+| `sv` | Swedish |
+| `th` | Thai |
+| `tr` | Turkish |
+| `uk` | Ukrainian |
+| `vi` | Vietnamese |
+| `zh_CN` | Simplified Chinese (default) |
+| `zh_HK` | Traditional Chinese (Hong Kong) |
+| `zh_TW` | Traditional Chinese (Taiwan) |
+
+Values are case-insensitive, and `-` and `_` are interchangeable, such as `zh-CN` and `zh_CN`.
+
+Chinese aliases: `zh-Hans` and `zh-Hans-CN` → `zh_CN`; `zh-Hant` and `zh-Hant-TW` → `zh_TW`; `zh-Hant-HK` → `zh_HK`.
+
+If a regional value is unavailable, the base language is tried, such as `en_US` → `en` or `ja_JP` → `ja`. If neither matches, the default language is used.
+
+</details>
+
 ## HAL
 
 HAL provides AppleHDA-specific properties and controls to CoreAudio. SimpleHDA detects it automatically: **installed HAL is enabled; without HAL, the ordinary IOAudio path is used**. Neither configuration requires a switch.
@@ -85,7 +142,9 @@ python3 Tools/package.py
 
 Packages are written to `Dist`, with the Release driver at the top level, a Debug driver in `Debug`, the HAL installer and SHA-256 manifests. To build only Release, run `zsh Tools/build.zsh Release`.
 
-Dependencies are pinned in `VendorVersions.json`; the original payload is in `Resources/AppleHDA.kext`. Once dependencies are prepared, you can build with `SimpleHDA.xcodeproj`. `Info.plist` supplies the version, and the bundle identifier is `cn.laobamac.SimpleHDA`.
+For Xcode, run `zsh Tools/prepare.zsh` once before opening `SimpleHDA.xcodeproj`. Press `⌘B` to build. The build phase also prepares dependencies and generated sources automatically.
+
+Dependencies are pinned in `VendorVersions.json`; the original payload is in `Resources/AppleHDA.kext`. `Info.plist` supplies the version, and the bundle identifier is `cn.laobamac.SimpleHDA`.
 
 Each push updates the fixed `pre` prerelease with the latest assets. Publishing a formal Release automatically builds and uploads the REL package. Use `1.0.0` or `v1.0.0` as the tag, matching `Info.plist`.
 

@@ -25,7 +25,16 @@ def obj(name, content):
 
 sources = sorted(str(p.relative_to(root)) for p in (root / 'Sources').glob('*.cpp'))
 sources += ['Vendor/Lilu/Lilu/Library/plugin_start.cpp', 'Generated/Payload.cpp', 'Generated/Payload.S']
-sources += sorted(str(p.relative_to(root)) for p in (root / 'Generated/kxld').glob('*.c'))
+kxld = root / 'Vendor/xnu/libkern/kxld'
+kxld_sources = sorted('Generated/kxld/' + p.name for p in kxld.glob('*.c') if not p.name.startswith('WKdm'))
+if not kxld_sources:
+    raise SystemExit('Run zsh Tools/prepare.zsh before generating the Xcode project.')
+sources += kxld_sources
+outputs = [p for p in sources if p.startswith(('Vendor/', 'Generated/'))]
+outputs += sorted('Generated/kxld/' + p.name for p in kxld.glob('*.h'))
+outputs += ['Generated/kxld/' + name for name in ('kxld.h', 'kxld_types.h', 'prelink.h')]
+outputs += ['Generated/Headers/libkern/' + name for name in ('kxld.h', 'kxld_types.h', 'prelink.h')]
+outputs += ['Generated/Headers/mach-o/stab.h', 'Generated/Headers/mach-o/x86_64/reloc.h']
 files, builds = [], []
 for p in sources + sorted(str(p.relative_to(root)) for p in (root / 'Sources').glob('*.h*')) + ['README.md', 'Info.plist']:
     ext = Path(p).suffix
@@ -36,7 +45,7 @@ for p in sources + sorted(str(p.relative_to(root)) for p in (root / 'Sources').g
 product = obj('product', 'isa = PBXFileReference; explicitFileType = "wrapper.kext"; path = SimpleHDA.kext; sourceTree = BUILT_PRODUCTS_DIR;')
 products = obj('products', f'isa = PBXGroup; children = ({product},); name = Products; sourceTree = "<group>";')
 group = obj('group', 'isa = PBXGroup; children = (' + ','.join(files + [products]) + ',); sourceTree = "<group>";')
-prepare = obj('prepare', 'isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); outputPaths = (); alwaysOutOfDate = 1; shellPath = /bin/zsh; shellScript = ' + q('set -e\n/usr/bin/python3 "$SRCROOT/Tools/prepare_vendor.py"\n/usr/bin/python3 "$SRCROOT/Tools/prepare_payload.py"\n') + ';')
+prepare = obj('prepare', 'isa = PBXShellScriptBuildPhase; name = "Prepare Dependencies and Payload"; buildActionMask = 2147483647; files = (); inputPaths = (); outputPaths = (' + ','.join(q('$(SRCROOT)/' + path) for path in outputs) + ',); alwaysOutOfDate = 1; shellPath = /bin/zsh; shellScript = ' + q('set -e\n/bin/zsh "$SRCROOT/Tools/prepare.zsh"\n') + ';')
 compilephase = obj('sources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(builds)},); runOnlyForDeploymentPostprocessing = 0;')
 frameworkphase = obj('frameworks', 'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
 settings = {
@@ -74,7 +83,9 @@ project = obj('project', f'isa = PBXProject; attributes = {{LastUpgradeCheck = 2
 p = root / 'SimpleHDA.xcodeproj'
 (p / 'project.pbxproj').write_text('// !$*UTF8*$!\n//\n//  project.pbxproj\n//  SimpleHDA\n//\n//  Created by laobamac on 2026/8/18.\n//  Copyright © 2026 laobamac. All rights reserved.\n//\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n' + '\n'.join(objects) + f'\n}}; rootObject = {project}; }}\n')
 (p / 'project.xcworkspace/contents.xcworkspacedata').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<Workspace version="1.0"><FileRef location="self:"></FileRef></Workspace>\n')
-(p / 'xcshareddata/xcschemes/SimpleHDA.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
+scheme = p / 'xcshareddata/xcschemes/SimpleHDA.xcscheme'
+if not scheme.exists():
+    scheme.write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2650" version="1.3"><BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{target}" BuildableName="SimpleHDA.kext" BlueprintName="SimpleHDA" ReferencedContainer="container:SimpleHDA.xcodeproj"/></BuildActionEntry></BuildActionEntries></BuildAction><LaunchAction buildConfiguration="Debug"/><ProfileAction buildConfiguration="Release"/><AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>
 ''')
 info = {'CFBundleDevelopmentRegion':'en','CFBundleExecutable':'$(EXECUTABLE_NAME)','CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','CFBundleInfoDictionaryVersion':'6.0','CFBundleName':'SimpleHDA','CFBundlePackageType':'KEXT','CFBundleShortVersionString':version,'CFBundleVersion':version,'OSBundleRequired':'Root', 'NSHumanReadableCopyright':'Copyright © 2026 laobamac. All rights reserved.', 'OSBundleLibraries': {'as.vit9696.Lilu':lilu_version, 'com.apple.kpi.bsd':'10.0.0','com.apple.kpi.iokit':'10.0.0','com.apple.kpi.libkern':'10.0.0','com.apple.kpi.mach':'10.0.0','com.apple.kpi.unsupported':'10.0.0'}, 'IOKitPersonalities': {'SimpleHDA': {'CFBundleIdentifier':'$(PRODUCT_BUNDLE_IDENTIFIER)','IOClass':'SimpleHDA','IOMatchCategory':'SimpleHDA','IOProviderClass':'IOResources','IOResourceMatch':'IOKit'}}}
