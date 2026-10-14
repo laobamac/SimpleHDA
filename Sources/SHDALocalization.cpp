@@ -11,7 +11,9 @@
 #include <Headers/kern_util.hpp>
 #include <Headers/kern_patcher.hpp>
 #include <libkern/c++/OSString.h>
+#include <libkern/c++/OSData.h>
 #include <IOKit/IORegistryEntry.h>
+#include <IOKit/IODeviceTreeSupport.h>
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-W#warnings"
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
@@ -43,6 +45,42 @@ const shda::Localization *findLocale(const char *name) {
 }
 namespace shda {
 bool selectLocale(const char *name) {
+#if KERNEL
+    char nvramLang[16] {};
+    if (!name) {
+        auto options = IORegistryEntry::fromPath("/options", gIODTRegistryPlane);
+        if (options) {
+            auto prop = options->getProperty("prev-lang:kbd");
+            if (prop) {
+                const char *strBytes = nullptr;
+                size_t strLen = 0;
+                auto dataProp = OSDynamicCast(OSData, prop);
+                if (dataProp) {
+                    strBytes = static_cast<const char *>(dataProp->getBytesNoCopy());
+                    strLen = dataProp->getLength();
+                } else {
+                    auto strProp = OSDynamicCast(OSString, prop);
+                    if (strProp) {
+                        strBytes = strProp->getCStringNoCopy();
+                        strLen = strBytes ? strlen(strBytes) : 0;
+                    }
+                }
+                if (strBytes && strLen > 0) {
+                    size_t i = 0;
+                    while (i < strLen && i < sizeof(nvramLang) - 1 &&
+                           strBytes[i] != 0 && strBytes[i] != ':' &&
+                           strBytes[i] != ' ' && strBytes[i] != '\n' && strBytes[i] != '\r') {
+                        nvramLang[i] = strBytes[i];
+                        ++i;
+                    }
+                    nvramLang[i] = '\0';
+                    if (i > 0) name = nvramLang;
+                }
+            }
+            options->release();
+        }
+    }
+#endif
     auto found = findLocale(name);
     if (!found && name) {
         if (equivalent(name, "zh-Hans") || equivalent(name, "zh-Hans-CN") || equivalent(name, "zh-CN")) found = findLocale("zh_CN");
@@ -66,12 +104,12 @@ bool selectLocale(const char *name) {
     return found != nullptr;
 }
 const char *selectedLocale() {
-    if (!selected) selectLocale(defaultLocale);
+    if (!selected) selectLocale(nullptr);
     return selected ? selected->locale : "en";
 }
 const char *localized(const char *key) {
     if (!key) return nullptr;
-    if (!selected) selectLocale(defaultLocale);
+    if (!selected) selectLocale(nullptr);
     if (selected)
         for (size_t i = 0; i < selected->count; ++i)
             if (!strcmp(key, selected->strings[i].key)) return selected->strings[i].value;
@@ -217,7 +255,7 @@ template <typename T> bool bind(const char *name, const char *expected, uint64_t
 namespace shda {
 void configureLocalization() {
     char locale[64] {};
-    selectLocale(defaultLocale);
+    selectLocale(nullptr);
     if (lilu_get_boot_args("shda-lang", locale, sizeof(locale))) {
         locale[sizeof(locale) - 1] = 0;
         if (!selectLocale(locale)) IOLog("SimpleHDA: unsupported locale %s; using %s\n", locale, selectedLocale());
