@@ -10,6 +10,7 @@
 #if KERNEL
 #include <Headers/kern_util.hpp>
 #include <Headers/kern_patcher.hpp>
+#include <libkern/c++/OSData.h>
 #include <libkern/c++/OSString.h>
 #include <IOKit/IORegistryEntry.h>
 #pragma clang diagnostic push
@@ -68,6 +69,23 @@ bool selectLocale(const char *name) {
 const char *selectedLocale() {
     if (!selected) selectLocale(defaultLocale);
     return selected ? selected->locale : "en";
+}
+const char *configureLocale(const void *data, size_t length, const char *override) {
+    selected = nullptr;
+    selectLocale(defaultLocale);
+    if (override && selectLocale(override)) return "boot-arg";
+    auto bytes = static_cast<const char *>(data);
+    char locale[64] {};
+    size_t size = 0;
+    while (bytes && size < length && bytes[size] && bytes[size] != ':') {
+        auto value = bytes[size];
+        if (size >= sizeof(locale) - 1 || !((value >= 'a' && value <= 'z') ||
+            (value >= 'A' && value <= 'Z') || (value >= '0' && value <= '9') || value == '-' || value == '_'))
+            return "default";
+        locale[size++] = value;
+    }
+    if (size && selectLocale(locale)) return "nvram";
+    return "default";
 }
 const char *localized(const char *key) {
     if (!key) return nullptr;
@@ -217,13 +235,25 @@ template <typename T> bool bind(const char *name, const char *expected, uint64_t
 namespace shda {
 void configureLocalization() {
     char locale[64] {};
-    selectLocale(defaultLocale);
-    if (lilu_get_boot_args("shda-lang", locale, sizeof(locale))) {
-        locale[sizeof(locale) - 1] = 0;
-        if (!selectLocale(locale)) IOLog("SimpleHDA: unsupported locale %s; using %s\n", locale, selectedLocale());
+    bool overridden = lilu_get_boot_args("shda-lang", locale, sizeof(locale));
+    locale[sizeof(locale) - 1] = 0;
+    OSObject *value = nullptr;
+    auto options = IORegistryEntry::fromPath("IODeviceTree:/options");
+    if (options) {
+        value = options->copyProperty("prev-lang:kbd");
+        options->release();
     }
+    auto data = OSDynamicCast(OSData, value);
+    auto text = OSDynamicCast(OSString, value);
+    auto source = configureLocale(data ? data->getBytesNoCopy() : text ? text->getCStringNoCopy() : nullptr,
+        data ? data->getLength() : text ? text->getLength() : 0, overridden ? locale : nullptr);
+    if (value) value->release();
+    IOLog("SimpleHDA: locale=%s source=%s\n", selectedLocale(), source);
     auto root = IORegistryEntry::getRegistryRoot();
-    if (root) root->setProperty("SimpleHDALocale", selectedLocale());
+    if (root) {
+        root->setProperty("SimpleHDALocale", selectedLocale());
+        root->setProperty("SimpleHDALocaleSource", source);
+    }
 }
 bool bindLocalizationSymbol(const char *name, uint64_t &address) {
     return bind(name, localizationImports[0], address, deviceName, setDeviceName) ||

@@ -53,7 +53,7 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 | `keepsyms=1` | 必需 |
 | `-shdaoff` | 停用驱动 |
 | `-shdahaloff` | 手动停用 HAL，供故障对照 |
-| `shda-lang=en` | 切换名称语言，默认 `zh_CN` |
+| `shda-lang=en` | 指定名称语言，优先于自动探测 |
 | `-shdadbg` | 开启 Debug 版本日志 |
 
 `alcid` 使用自己声卡的有效值；通过设备属性设置 layout 时，无需重复添加。
@@ -61,7 +61,9 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 <details>
 <summary>shda-lang 支持的语言（41 种）</summary>
 
-用法：`shda-lang=ja`。默认 `zh_CN`，不设置此参数即可使用简体中文。修改后重启生效。
+默认自动读取 NVRAM `prev-lang:kbd` 中的语言。优先级：**有效的 `shda-lang` → NVRAM 语言 → `zh_CN`**。例如 `shda-lang=ja` 强制使用日语，修改后重启生效。
+
+`prev-lang:kbd` 可能由 OpenCore 固定，与登录用户的语言设置不同；此时可通过 `shda-lang` 指定。
 
 | 值 | 语言 |
 | :--- | :--- |
@@ -103,7 +105,7 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 | `tr` | 土耳其语 |
 | `uk` | 乌克兰语 |
 | `vi` | 越南语 |
-| `zh_CN` | 简体中文（默认） |
+| `zh_CN` | 简体中文（探测失败时使用） |
 | `zh_HK` | 繁体中文（香港） |
 | `zh_TW` | 繁体中文（台湾） |
 
@@ -111,7 +113,7 @@ SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，
 
 中文别名：`zh-Hans`、`zh-Hans-CN` → `zh_CN`；`zh-Hant`、`zh-Hant-TW` → `zh_TW`；`zh-Hant-HK` → `zh_HK`。
 
-区域值未匹配时会尝试基础语言，例如 `en_US` → `en`、`ja_JP` → `ja`。仍无法匹配时使用默认语言。
+区域值未匹配时会尝试基础语言，例如 `en_US` → `en`、`ja_JP` → `ja`。无效的启动参数不覆盖自动探测结果。
 
 </details>
 

@@ -7,6 +7,7 @@
 //
 #ifndef SHDA_LOCALIZATION_HPP
 #define SHDA_LOCALIZATION_HPP
+#include <stddef.h>
 #include <stdint.h>
 class KernelPatcher;
 namespace shda {
@@ -31,6 +32,7 @@ inline constexpr unsigned localizationImportCount = sizeof(localizationImports) 
 bool selectLocale(const char *);
 const char *selectedLocale();
 const char *localized(const char *);
+const char *configureLocale(const void *, size_t, const char *);
 void configureLocalization();
 bool bindLocalizationSymbol(const char *, uint64_t &);
 bool routeSelectorLocalization(KernelPatcher &);

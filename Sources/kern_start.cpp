@@ -195,6 +195,7 @@ bool run() {
         }
     }
     if (shda::moduleCount > 8) { state("payload-limit-exceeded"); return false; }
+    shda::configureLocalization();
     if (!shda::initializeResources({kextLock, retainCallbackOwner, canDeliver, releaseCallbackOwner})) { state("resource-init-failed"); return false; }
     for (size_t i = 0; i < sizeof(nativeIDs) / sizeof(nativeIDs[0]); ++i) {
         if (i) {
@@ -326,7 +327,6 @@ void patcherReady(void *, KernelPatcher &patcher) {
     int keepsyms = 0;
     if (!lilu_get_boot_args("keepsyms", &keepsyms, sizeof(keepsyms)) || keepsyms != 1) { state("requires-keepsyms-1"); return; }
     shda::configureHAL();
-    shda::configureLocalization();
     const char *symbols[] {
         "__ZN6OSKext21withPrelinkedInfoDictEP12OSDictionaryb7kc_kind",
         "__ZN6OSKext22loadKextWithIdentifierEPKcbbhhP7OSArray",

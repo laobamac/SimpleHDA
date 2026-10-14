@@ -53,7 +53,7 @@ Remove other AppleHDA restoration solutions or root patches before installation 
 | `keepsyms=1` | Required |
 | `-shdaoff` | Disable the driver |
 | `-shdahaloff` | Manually disable HAL for troubleshooting |
-| `shda-lang=en` | Change the language of device names; default: `zh_CN` |
+| `shda-lang=en` | Override the automatically detected language of device names |
 | `-shdadbg` | Enable logging in the Debug build |
 
 Use the appropriate `alcid` for your codec. If the layout is configured through device properties, an additional alcid argument is unnecessary.
@@ -61,7 +61,9 @@ Use the appropriate `alcid` for your codec. If the layout is configured through 
 <details>
 <summary>Languages supported by shda-lang (41 locales)</summary>
 
-Usage: `shda-lang=ja`. The default is `zh_CN`; omit the argument to use Simplified Chinese. Reboot after changing it.
+The language is detected from NVRAM `prev-lang:kbd` by default. Priority: **valid `shda-lang` → NVRAM language → `zh_CN`**. For example, `shda-lang=ja` forces Japanese. Reboot after changing it.
+
+OpenCore may fix `prev-lang:kbd` to a value that differs from the logged-in user's language. Use `shda-lang` to override it when needed.
 
 | Value | Language |
 | :--- | :--- |
@@ -103,7 +105,7 @@ Usage: `shda-lang=ja`. The default is `zh_CN`; omit the argument to use Simplifi
 | `tr` | Turkish |
 | `uk` | Ukrainian |
 | `vi` | Vietnamese |
-| `zh_CN` | Simplified Chinese (default) |
+| `zh_CN` | Simplified Chinese (fallback) |
 | `zh_HK` | Traditional Chinese (Hong Kong) |
 | `zh_TW` | Traditional Chinese (Taiwan) |
 
@@ -111,7 +113,7 @@ Values are case-insensitive, and `-` and `_` are interchangeable, such as `zh-CN
 
 Chinese aliases: `zh-Hans` and `zh-Hans-CN` → `zh_CN`; `zh-Hant` and `zh-Hant-TW` → `zh_TW`; `zh-Hant-HK` → `zh_HK`.
 
-If a regional value is unavailable, the base language is tried, such as `en_US` → `en` or `ja_JP` → `ja`. If neither matches, the default language is used.
+If a regional value is unavailable, the base language is tried, such as `en_US` → `en` or `ja_JP` → `ja`. Invalid boot arguments do not override automatic detection.
 
 </details>
 
