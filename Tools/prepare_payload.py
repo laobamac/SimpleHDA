@@ -89,8 +89,8 @@ for p in sorted((source / 'Contents/Resources').glob('*.lproj/Localizable.string
 locales = [item['locale'] for item in manifest['localizations']]
 if 'en' not in locales or 'zh_CN' not in locales:
     raise SystemExit('Original English and Simplified Chinese localization tables are required.')
-default_locale = os.environ.get('SIMPLEHDA_LOCALE', 'zh_CN')
-if default_locale not in locales:
+default_locale = os.environ.get('SIMPLEHDA_LOCALE', '')
+if default_locale and default_locale not in locales:
     raise SystemExit(f'Unsupported SIMPLEHDA_LOCALE: {default_locale}; available: {", ".join(locales)}')
 manifest['default_locale'] = default_locale
 cpp.extend(['namespace shda {', 'const Module modules[] = {\n' + ',\n'.join(entries) + '\n};', 'const size_t moduleCount = sizeof(modules) / sizeof(modules[0]);', 'const Resource resources[] = {\n' + ',\n'.join(res) + '\n};', 'const size_t resourceCount = sizeof(resources) / sizeof(resources[0]);', 'const Localization localizations[] = {\n' + ',\n'.join(localized) + '\n};', 'const size_t localizationCount = sizeof(localizations) / sizeof(localizations[0]);', f'const char defaultLocale[] = {json.dumps(default_locale)};', '}'])

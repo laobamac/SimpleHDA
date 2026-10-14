@@ -49,7 +49,6 @@ prepare = obj('prepare', 'isa = PBXShellScriptBuildPhase; name = "Prepare Depend
 compilephase = obj('sources', f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ({",".join(builds)},); runOnlyForDeploymentPostprocessing = 0;')
 frameworkphase = obj('frameworks', 'isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
 settings = {
-'SIMPLEHDA_LOCALE':'zh_CN',
 'ALWAYS_SEARCH_USER_PATHS':'NO', 'ARCHS':'x86_64', 'ONLY_ACTIVE_ARCH':'NO', 'SDKROOT':'macosx', 'SUPPORTED_PLATFORMS':'macosx', 'MACOSX_DEPLOYMENT_TARGET':'10.15',
 'PRODUCT_NAME':'SimpleHDA', 'PRODUCT_BUNDLE_IDENTIFIER':'cn.laobamac.SimpleHDA', 'MODULE_NAME':'cn.laobamac.SimpleHDA',
 'MODULE_VERSION':version, 'CURRENT_PROJECT_VERSION':version, 'MODULE_START':'SimpleHDA_kern_start', 'MODULE_STOP':'SimpleHDA_kern_stop',
