@@ -324,8 +324,6 @@ OSReturn fileset(OSDictionary *request) {
 void patcherReady(void *, KernelPatcher &patcher) {
     runtimePatcher = &patcher;
     state("patcher-ready");
-    int keepsyms = 0;
-    if (!lilu_get_boot_args("keepsyms", &keepsyms, sizeof(keepsyms)) || keepsyms != 1) { state("requires-keepsyms-1"); return; }
     shda::configureHAL();
     const char *symbols[] {
         "__ZN6OSKext21withPrelinkedInfoDictEP12OSDictionaryb7kc_kind",

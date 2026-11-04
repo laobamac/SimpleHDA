@@ -11,7 +11,7 @@
 
 **Restore native AppleHDA on macOS Tahoe**
 
-![Version](https://img.shields.io/badge/version-1.0.0-2563eb)
+![Version](https://img.shields.io/badge/version-1.0.1-2563eb)
 ![macOS](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
 ![Architecture](https://img.shields.io/badge/arch-x86__64-6b7280)
 ![OpenCore](https://img.shields.io/badge/boot-OpenCore-16a34a)
@@ -32,16 +32,16 @@ SimpleHDA is a Lilu plug-in that restores the original AppleHDA stack through Op
 | :--- | :--- |
 | System | macOS Tahoe 26 / Darwin 25.x |
 | Architecture | Intel / AMD x86_64 |
-| Bootloader | OpenCore |
+| Bootloader | OpenCore with `Kernel → Quirks → DisableLinkeditJettison` enabled |
 | Dependencies | Lilu ≥ 1.7.1 and AppleALC |
-| Configuration | A working `alcid` or `layout-id`, plus `keepsyms=1` |
+| Configuration | A working `alcid` or `layout-id` |
 
 ## Installation
 
 1. Download the `RELEASE` package from [Releases](https://github.com/laobamac/SimpleHDA/releases), extract it and copy `SimpleHDA.kext` to `EFI/OC/Kexts`.
 2. Add it to `Kernel → Add` in this order: **Lilu → AppleALC → SimpleHDA**. The package includes an example entry in `OpenCore-Kernel-Add.plist`.
-3. Add `keepsyms=1` and retain the working AppleALC, layout and ACPI configuration for your machine.
-4. Optionally install `SimpleHDA-HAL-1.0.0.pkg`.
+3. Ensure `Kernel → Quirks → DisableLinkeditJettison` is `true` and retain the working AppleALC, layout and ACPI configuration for your machine.
+4. Optionally install `SimpleHDA-HAL-1.0.1.pkg`.
 5. Reboot.
 
 Remove other AppleHDA restoration solutions or root patches before installation to avoid loading the stack twice.
@@ -50,11 +50,12 @@ Remove other AppleHDA restoration solutions or root patches before installation 
 
 | Argument | Purpose |
 | :--- | :--- |
-| `keepsyms=1` | Required |
 | `-shdaoff` | Disable the driver |
 | `-shdahaloff` | Manually disable HAL for troubleshooting |
 | `shda-lang=en` | Override the automatically detected language of device names |
 | `-shdadbg` | Enable logging in the Debug build |
+
+The `keepsyms=1` boot argument is not required. OpenCore's `DisableLinkeditJettison` preserves the symbol tables needed for runtime linking, so this quirk must take effect successfully.
 
 Use the appropriate `alcid` for your codec. If the layout is configured through device properties, an additional alcid argument is unnecessary.
 
@@ -148,9 +149,9 @@ For Xcode, run `zsh Tools/prepare.zsh` once before opening `SimpleHDA.xcodeproj`
 
 Dependencies are pinned in `VendorVersions.json`; the original payload is in `Resources/AppleHDA.kext`. `Info.plist` supplies the version, and the bundle identifier is `cn.laobamac.SimpleHDA`.
 
-Each push updates the `v1.0.0-alpha` prerelease, keeping only the latest prerelease and assets. Release notes list the five most recent commits. Filenames include the short commit hash, such as `SimpleHDA-Tahoe-v1.0.0-RELEASE-alpha-abcdef0.zip`.
+Each push updates the `v1.0.1-alpha` prerelease, keeping only the latest prerelease and assets. Release notes list the five most recent commits. Filenames include the short commit hash, such as `SimpleHDA-Tahoe-v1.0.1-RELEASE-alpha-abcdef0.zip`.
 
-Publishing a formal Release automatically uploads `DEBUG` and `RELEASE` packages, such as `SimpleHDA-Tahoe-v1.0.0-RELEASE.zip`. Use `1.0.0` or `v1.0.0` as the tag, matching `Info.plist`.
+Publishing a formal Release automatically uploads `DEBUG` and `RELEASE` packages, such as `SimpleHDA-Tahoe-v1.0.1-RELEASE.zip`. Use `1.0.1` or `v1.0.1` as the tag, matching `Info.plist`.
 
 ## Acknowledgments
 
