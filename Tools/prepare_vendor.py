@@ -29,8 +29,21 @@ for p in (src / 'kxld').glob('*'):
         text = re.sub(r'(kxld_addr_t\s+my_link_addr)\s*;', r'\1 = 0;', text)
     if p.name == 'kxld_reloc.c':
         for typ in ('32', '64'):
+            text = text.replace(f'uint{typ}_t instr{typ} = *instr{typ}p;',
+                                f'uint{typ}_t instr{typ}; memcpy(&instr{typ}, instruction, sizeof(instr{typ}));')
             text = text.replace(f'instr{typ} = *instr{typ}p;', f'memcpy(&instr{typ}, instruction, sizeof(instr{typ}));')
             text = text.replace(f'*instr{typ}p = instr{typ};', f'memcpy(instruction, &instr{typ}, sizeof(instr{typ}));')
+        text = text.replace('#include "kxld_reloc.h"', '#include "kxld_reloc.h"\nextern uint64_t shda_branch_stub(uint64_t);')
+        branch = '\t\t\trval = calculate_displacement_x86_64(target, adjustment, &instr32);'
+        if text.count(branch) != 1:
+            raise SystemExit('Unsupported x86_64 branch relocation implementation')
+        text = text.replace(branch, '''			if (type == X86_64_RELOC_BRANCH &&
+			    ABSOLUTE_VALUE((int64_t)(target + instr32 - adjustment)) >= X86_64_RIP_RELATIVE_LIMIT) {
+				target = shda_branch_stub(target + instr32);
+				require_action(target, finish, rval = KERN_FAILURE);
+				instr32 = 0;
+			}
+''' + branch)
     if p.name == 'kxld_kext.c':
         text = text.replace('#include <libkern/OSKextLibPrivate.h>', 'extern void shda_weak_reference(void);')
         text = text.replace('&kext_weak_symbol_referenced', '&shda_weak_reference')

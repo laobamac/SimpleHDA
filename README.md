@@ -9,10 +9,10 @@
 
 # SimpleHDA
 
-**在 macOS Tahoe 上恢复原版 AppleHDA**
+**在 macOS Tahoe 和 GoldenGate 上恢复原版 AppleHDA**
 
 ![Version](https://img.shields.io/badge/version-1.0.1-2563eb)
-![macOS](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
+![macOS](https://img.shields.io/badge/macOS-26%20%7C%2027-111827)
 ![Architecture](https://img.shields.io/badge/arch-x86__64-6b7280)
 ![OpenCore](https://img.shields.io/badge/boot-OpenCore-16a34a)
 
@@ -24,13 +24,15 @@ OpenCore 注入 · 原版音频栈 · HAL 自动检测 · 设备名称本地化
 
 ---
 
-SimpleHDA 是一个 Lilu 插件，通过 OpenCore 注入恢复原版 AppleHDA，让 AppleALC 继续使用现有的声卡配置。驱动不修改系统卷，不重建内核集合。
+SimpleHDA 通过 OpenCore 恢复原版 AppleHDA，让 AppleALC 继续使用现有的声卡配置。
+
+macOS 27 需要在目标系统的辅助内核集合（AuxKC）中保留 `OSvKernDSPLib` 和 `vecLib`。
 
 ## 要求
 
 | 项目 | 要求 |
 | :--- | :--- |
-| 系统 | macOS Tahoe 26 / Darwin 25.x |
+| 系统 | macOS Tahoe 26 / Darwin 25.x、macOS GoldenGate 27 / Darwin 27.x |
 | 架构 | Intel / AMD x86_64 |
 | 引导 | OpenCore，启用 `Kernel → Quirks → DisableLinkeditJettison` |
 | 依赖 | Lilu ≥ 1.7.1、AppleALC |

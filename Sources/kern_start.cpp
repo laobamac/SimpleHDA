@@ -9,6 +9,7 @@
 #include <Headers/kern_patcher.hpp>
 #include <Headers/plugin_start.hpp>
 #include <IOKit/IORegistryEntry.h>
+#include <libkern/c++/OSData.h>
 #include <libkern/c++/OSDictionary.h>
 #include <libkern/c++/OSNumber.h>
 #include <libkern/c++/OSString.h>
@@ -65,9 +66,14 @@ thread_t filesetThread;
 bool attempted;
 char lastLinkError[1024];
 
+constexpr auto GoldenGate = static_cast<KernelVersion>(27);
+constexpr char legacyNVRAM[] = "com.apple.driver.AppleEFINVRAM";
+constexpr char dspLibrary[] = "com.apple.driver.DspFuncLib";
+constexpr char audioFamily[] = "com.apple.iokit.IOAudioFamily";
+
 const char *nativeIDs[] {
-    "com.apple.kernel", "com.apple.iokit.IOPCIFamily", "com.apple.driver.AppleEFINVRAM",
-    "com.apple.iokit.IOAudioFamily", "com.apple.iokit.IOGraphicsFamily",
+    "com.apple.kernel", "com.apple.iokit.IOPCIFamily", legacyNVRAM,
+    audioFamily, "com.apple.iokit.IOGraphicsFamily",
     "com.apple.iokit.IONDRVSupport", "com.apple.kext.OSvKernDSPLib", "com.apple.vecLib.kext"
 };
 struct Dependency {
@@ -111,6 +117,76 @@ bool addDependency(const char *id, const mach_header_64 *header) {
     IOLog("SimpleHDA: snapshot %s bytes=%lu\n", id, d.buffer.size);
     return true;
 }
+void readEQCalibration(void *instance) {
+    auto options = IORegistryEntry::fromPath("IODeviceTree:/options");
+    if (!options) return;
+    auto property = options->copyProperty("EQCal");
+    options->release();
+    if (!property) return;
+    auto data = OSDynamicCast(OSData, property);
+    if (data && data->getLength() >= 8 && data->getLength() <= 0x200) {
+        const auto bytes = static_cast<const uint8_t *>(data->getBytesNoCopy());
+        uint16_t length;
+        uint32_t expected;
+        memcpy(&length, bytes + 2, sizeof(length));
+        memcpy(&expected, bytes + 4, sizeof(expected));
+        if (length >= 1 && length <= data->getLength()) {
+            uint32_t crc = 0;
+            for (size_t index = 0; index < length; ++index) {
+                crc ^= index >= 4 && index < 8 ? 0 : bytes[index];
+                for (unsigned bit = 0; bit < 8; ++bit)
+                    crc = (crc >> 1) ^ ((crc & 1) ? 0x82f63b78U : 0U);
+            }
+            if (expected == 0x11222211 || expected == crc) {
+                auto object = static_cast<uint8_t *>(instance);
+                memcpy(object + 0xf2, bytes, data->getLength());
+                object[0xf1] = 1;
+            }
+        }
+    }
+    property->release();
+}
+bool redirectCalibration(shda::Buffer &file) {
+    constexpr char calibration[] = "__ZN20DspFuncCalibrationEQ22setParametersFromNVRamEv";
+    constexpr char oldMetaClass[] = "__ZN13AppleEFINVRAM9metaClassE";
+    constexpr char replacement[] = "__ZN9IOService9metaClassE";
+    uint8_t jump[] {0x48, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xe0};
+    static_assert(sizeof(replacement) <= sizeof(oldMetaClass), "replacement fits in string table");
+    const auto header = reinterpret_cast<const mach_header_64 *>(file.data);
+    auto command = reinterpret_cast<const uint8_t *>(header + 1);
+    const symtab_command *symbols = nullptr;
+    const section_64 *text = nullptr;
+    for (uint32_t index = 0; index < header->ncmds; ++index) {
+        auto load = reinterpret_cast<const load_command *>(command);
+        if (load->cmd == LC_SYMTAB) symbols = reinterpret_cast<const symtab_command *>(load);
+        if (load->cmd == LC_SEGMENT_64) {
+            auto segment = reinterpret_cast<const segment_command_64 *>(load);
+            auto section = reinterpret_cast<const section_64 *>(segment + 1);
+            for (uint32_t j = 0; j < segment->nsects; ++j)
+                if (!strncmp(section[j].sectname, "__text", 16)) text = section + j;
+        }
+        command += load->cmdsize;
+    }
+    if (!symbols || !text || text->size < sizeof(jump)) return false;
+    auto nlist = reinterpret_cast<const nlist_64 *>(file.data + symbols->symoff);
+    auto strings = reinterpret_cast<char *>(file.data + symbols->stroff);
+    uint8_t *code = nullptr;
+    char *oldSymbol = nullptr;
+    for (uint32_t index = 0; index < symbols->nsyms; ++index) {
+        auto name = strings + nlist[index].n_un.n_strx;
+        auto value = nlist[index].n_value;
+        if (!strcmp(name, calibration) && (nlist[index].n_type & N_TYPE) == N_SECT &&
+            value >= text->addr && value - text->addr <= text->size - sizeof(jump))
+            code = file.data + text->offset + value - text->addr;
+        if (!strcmp(name, oldMetaClass) && nlist[index].n_type == (N_EXT | N_UNDF)) oldSymbol = name;
+    }
+    if (!code || !oldSymbol) return false;
+    auto address = reinterpret_cast<uintptr_t>(readEQCalibration);
+    memcpy(jump + 2, &address, sizeof(address));
+    memcpy(code, jump, sizeof(jump));
+    memcpy(oldSymbol, replacement, sizeof(replacement));
+    return true;
+}
 bool redirectResources(shda::Buffer &buffer) {
     auto h = reinterpret_cast<mach_header_64 *>(buffer.data);
     auto p = reinterpret_cast<uint8_t *>(h + 1);
@@ -132,11 +208,20 @@ bool redirectResources(shda::Buffer &buffer) {
     }
     return found == 2;
 }
-struct Allocation { vm_offset_t address {}; vm_size_t size {}; };
+struct Allocation {
+    vm_offset_t address {};
+    vm_size_t size {};
+    shda::BranchStubs branches;
+};
+Allocation *branchAllocation;
 kxld_addr_t allocate(size_t size, KXLDAllocateFlags *flags, void *context) {
     auto a = static_cast<Allocation *>(context);
     if (!size || size > 32U * 1024U * 1024U || a->address) return 0;
     a->size = (size + 4095) & ~vm_size_t(4095);
+    if (branchAllocation == a) {
+        a->branches.offset = a->size;
+        a->size += shda::BranchStubs::PageSize;
+    }
     if (allocateImage(&a->address, a->size, false) != KERN_SUCCESS) { a->address = 0; return 0; }
     *flags = kKxldAllocateWritable;
     return a->address;
@@ -197,7 +282,10 @@ bool run() {
     if (shda::moduleCount > 8) { state("payload-limit-exceeded"); return false; }
     shda::configureLocalization();
     if (!shda::initializeResources({kextLock, retainCallbackOwner, canDeliver, releaseCallbackOwner})) { state("resource-init-failed"); return false; }
+    const bool goldenGate = getKernelVersion() == GoldenGate;
+    shda::Buffer *localizationSource = nullptr;
     for (size_t i = 0; i < sizeof(nativeIDs) / sizeof(nativeIDs[0]); ++i) {
+        if (goldenGate && !strcmp(nativeIDs[i], legacyNVRAM)) continue;
         if (i) {
             state("native-loading", nativeIDs[i]);
             auto result = loadImage(nativeIDs[i], false, true, 0, 2, nullptr);
@@ -209,9 +297,11 @@ bool run() {
         }
         state("native-snapshot", nativeIDs[i]);
         if (!addDependency(nativeIDs[i], findNative(nativeIDs[i]))) { state("native-snapshot-failed", nativeIDs[i]); return false; }
+        if (!strcmp(nativeIDs[i], audioFamily)) localizationSource = &dependencies[dependencyCount - 1].buffer;
     }
+    if (!localizationSource) { state("localization-source-missing"); return false; }
     {
-        auto &buffer = dependencies[3].buffer;
+        auto &buffer = *localizationSource;
         auto header = reinterpret_cast<mach_header_64 *>(buffer.data);
         auto command = reinterpret_cast<uint8_t *>(header + 1);
         unsigned bindings = 0;
@@ -243,6 +333,13 @@ bool run() {
         shda::Buffer file {static_cast<uint8_t *>(IOMalloc(module.executableSize)), module.executableSize};
         if (!file.data) { state("out-of-memory"); success = false; break; }
         memcpy(file.data, module.executable, file.size);
+        const bool redirectNVRAM = goldenGate && !strcmp(module.identifier, dspLibrary);
+        if (redirectNVRAM && (!shda::validateFile(file.data, file.size) || !redirectCalibration(file))) {
+            file.clear();
+            state("calibration-layout-unsupported", module.identifier);
+            success = false;
+            break;
+        }
         KXLDDependency deps[16] {};
         for (size_t i = 0; i < dependencyCount; ++i) {
             deps[i].kext = dependencies[i].buffer.data;
@@ -259,9 +356,11 @@ bool run() {
         lastLinkError[0] = 0;
         u_char *linked = nullptr;
         kxld_addr_t kmod = 0;
+        branchAllocation = goldenGate ? &allocation : nullptr;
         auto result = shda::validateFile(file.data, file.size) ?
             kxld_link_file(linker, file.data, file.size, module.identifier, &allocation,
                 deps, static_cast<unsigned>(dependencyCount), &linked, &kmod) : KERN_INVALID_ARGUMENT;
+        branchAllocation = nullptr;
         file.clear();
         if (result != KERN_SUCCESS || !allocation.address || reinterpret_cast<uintptr_t>(linked) != allocation.address ||
             kmod < allocation.address || kmod > allocation.address + allocation.size - sizeof(kmod_info_t)) {
@@ -271,12 +370,25 @@ bool run() {
             snprintf(detail, sizeof(detail), "%s result=0x%x %s", module.identifier, result, lastLinkError);
             state("link-failed", detail); success = false; break;
         }
+        if (!allocation.branches.emit(linked, allocation.size, allocation.address)) {
+            freeImage(allocation.address, allocation.size);
+            state("branch-stubs-failed", module.identifier);
+            success = false;
+            break;
+        }
         auto image = reinterpret_cast<mach_header_64 *>(allocation.address);
         if (!addDependency(module.identifier, image)) {
             freeImage(allocation.address, allocation.size);
             state("linked-snapshot-failed", module.identifier); success = false; break;
         }
         auto plist = OSDynamicCast(OSDictionary, OSUnserializeXML(module.plist));
+        if (redirectNVRAM && plist) {
+            const char *libraryKeys[] {"OSBundleLibraries", "OSBundleLibraries_x86_64"};
+            for (const auto key : libraryKeys) {
+                auto libraries = OSDynamicCast(OSDictionary, plist->getObject(key));
+                if (libraries) libraries->removeObject(legacyNVRAM);
+            }
+        }
         auto slide = kcSlide(0);
         auto info = reinterpret_cast<kmod_info_t *>(kmod);
         if (!plist || !shda::preparePrelink(linked, allocation.size, slide) ||
@@ -287,6 +399,7 @@ bool run() {
             freeImage(allocation.address, allocation.size);
             state("prelink-preparation-failed", module.identifier); success = false; break;
         }
+        if (allocation.branches.count) info->size = allocation.size;
         info->address -= slide;
         state("registering", module.identifier);
         auto registered = registerImage(plist, false, 0);
@@ -378,6 +491,9 @@ void start() {
 const char *disable[] {"-shdaoff"};
 const char *debug[] {"-shdadbg"};
 }
+extern "C" uint64_t shda_branch_stub(uint64_t target) {
+    return branchAllocation ? branchAllocation->branches.resolve(branchAllocation->address, target) : 0;
+}
 void shda::publishState(const char *value, const char *detail) {
     IOLog("SimpleHDA: state=%s detail=%s\n", value, detail);
     auto root = IORegistryEntry::getRegistryRoot();
@@ -390,5 +506,5 @@ void shda::publishState(const char *value, const char *detail) {
 PluginConfiguration ADDPR(config) {
     xStringify(PRODUCT_NAME), parseModuleVersion(xStringify(MODULE_VERSION)), LiluAPI::AllowNormal,
     disable, 1, debug, 1, nullptr, 0,
-    KernelVersion::Tahoe, KernelVersion::Tahoe, start
+    KernelVersion::Tahoe, GoldenGate, start
 };

@@ -88,7 +88,7 @@ else:
         subject = commit['commit']['message'].splitlines()[0]
         subject = re.sub(r'([\\`*_{}\[\]<>#|])', r'\\\1', subject)
         changes.append(f'- [`{commit["sha"][:7]}`]({repository_url}/commit/{commit["sha"]}) {subject}')
-    description = 'Development build for macOS Tahoe.\n\n' + '\n'.join(changes) + '\n'
+    description = 'Development build for macOS Tahoe and GoldenGate.\n\n' + '\n'.join(changes) + '\n'
     values = {'tag_name': tag, 'target_commitish': sha, 'name': tag,
               'body': description, 'draft': False, 'prerelease': True, 'make_latest': 'false'}
     if current:

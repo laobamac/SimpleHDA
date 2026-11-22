@@ -36,7 +36,7 @@ if not package.is_file():
     raise SystemExit('HAL installer is missing; run zsh Tools/build.zsh')
 entry = {'Arch': 'x86_64', 'BundlePath': 'SimpleHDA.kext', 'Comment': f'SimpleHDA {version}',
          'Enabled': True, 'ExecutablePath': 'Contents/MacOS/SimpleHDA',
-         'MaxKernel': '25.99.99', 'MinKernel': '25.0.0', 'PlistPath': 'Contents/Info.plist'}
+         'MaxKernel': '', 'MinKernel': '25.0.0', 'PlistPath': 'Contents/Info.plist'}
 for configuration in ('Debug', 'Release'):
     name = f'SimpleHDA-Tahoe-v{version}-{configuration.upper()}{suffix}'
     stage = dist / name

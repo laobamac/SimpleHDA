@@ -9,10 +9,10 @@
 
 # SimpleHDA
 
-**Restore native AppleHDA on macOS Tahoe**
+**Restore native AppleHDA on macOS Tahoe and GoldenGate**
 
 ![Version](https://img.shields.io/badge/version-1.0.1-2563eb)
-![macOS](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
+![macOS](https://img.shields.io/badge/macOS-26%20%7C%2027-111827)
 ![Architecture](https://img.shields.io/badge/arch-x86__64-6b7280)
 ![OpenCore](https://img.shields.io/badge/boot-OpenCore-16a34a)
 
@@ -24,13 +24,15 @@ OpenCore injection · Native audio stack · Automatic HAL detection · Localized
 
 ---
 
-SimpleHDA is a Lilu plug-in that restores the original AppleHDA stack through OpenCore injection, allowing AppleALC to use your existing audio configuration. It does not modify the system volume or rebuild kernel collections.
+SimpleHDA restores the original AppleHDA through OpenCore so AppleALC can use your existing audio configuration.
+
+On macOS 27, keep `OSvKernDSPLib` and `vecLib` in the target system’s auxiliary kernel collection (AuxKC).
 
 ## Requirements
 
 | Component | Requirement |
 | :--- | :--- |
-| System | macOS Tahoe 26 / Darwin 25.x |
+| System | macOS Tahoe 26 / Darwin 25.x, macOS GoldenGate 27 / Darwin 27.x |
 | Architecture | Intel / AMD x86_64 |
 | Bootloader | OpenCore with `Kernel → Quirks → DisableLinkeditJettison` enabled |
 | Dependencies | Lilu ≥ 1.7.1 and AppleALC |

@@ -17,6 +17,15 @@ struct Buffer {
     size_t size {};
     void clear();
 };
+struct BranchStubs {
+    static constexpr size_t EntrySize = 16;
+    uintptr_t targets[64] {};
+    static constexpr size_t PageSize = 4096;
+    size_t offset {};
+    size_t count {};
+    uintptr_t resolve(uintptr_t base, uintptr_t target);
+    bool emit(void *image, size_t size, uintptr_t address) const;
+};
 using Reader = bool (*)(uint64_t address, void *destination, size_t size, void *context);
 bool snapshot(const mach_header_64 *header, Reader reader, void *context, Buffer &result);
 bool interfaceFor(const Buffer &symbols, Buffer &result);

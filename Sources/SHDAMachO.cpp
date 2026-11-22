@@ -8,6 +8,7 @@
 #include "SHDAMachO.hpp"
 #include "SHDAAlloc.h"
 #include <mach-o/nlist.h>
+#include <mach/vm_prot.h>
 #if KERNEL
 #include <libkern/libkern.h>
 #else
@@ -257,6 +258,61 @@ bool interfaceFor(const Buffer &symbols, Buffer &out) {
         n[i].n_value = 0;
     }
     return validateFile(out.data, out.size);
+}
+uintptr_t BranchStubs::resolve(uintptr_t base, uintptr_t target) {
+    if (!base || !offset || !target) return 0;
+    size_t index = 0;
+    for (; index < count; ++index)
+        if (targets[index] == target) break;
+    if (index == count) {
+        if (count == sizeof(targets) / sizeof(targets[0])) return 0;
+        targets[count++] = target;
+    }
+    return base + offset + index * EntrySize;
+}
+bool BranchStubs::emit(void *image, size_t size, uintptr_t address) const {
+    if (!count) return true;
+    if (!validateFile(image, size) || size < PageSize || offset != size - PageSize ||
+        offset % PageSize || address % PageSize || address > UINTPTR_MAX - size) return false;
+    auto header = static_cast<mach_header_64 *>(image);
+    const auto commandsEnd = sizeof(*header) + header->sizeofcmds;
+    const auto expandedEnd = commandsEnd + sizeof(segment_command_64);
+    auto command = reinterpret_cast<uint8_t *>(header + 1);
+    for (uint32_t index = 0; index < header->ncmds; ++index) {
+        auto load = reinterpret_cast<const load_command *>(command);
+        if (load->cmd == LC_SEGMENT_64) {
+            auto segment = reinterpret_cast<const segment_command_64 *>(load);
+            if (segment->vmaddr > address + offset || segment->vmsize > address + offset - segment->vmaddr ||
+                !range(segment->fileoff, segment->filesize, offset)) return false;
+            auto sections = reinterpret_cast<const section_64 *>(segment + 1);
+            for (uint32_t i = 0; i < segment->nsects; ++i)
+                if (sections[i].offset && sections[i].offset < expandedEnd) return false;
+        }
+        command += load->cmdsize;
+    }
+    if (expandedEnd > offset) return false;
+    auto bytes = static_cast<uint8_t *>(image);
+    for (auto i = commandsEnd; i < expandedEnd; ++i)
+        if (bytes[i]) return false;
+    auto segment = reinterpret_cast<segment_command_64 *>(command);
+    *segment = {};
+    segment->cmd = LC_SEGMENT_64;
+    segment->cmdsize = sizeof(*segment);
+    memcpy(segment->segname, "__SHDA_STUBS", sizeof("__SHDA_STUBS"));
+    segment->vmaddr = address + offset;
+    segment->vmsize = segment->filesize = PageSize;
+    segment->fileoff = offset;
+    segment->maxprot = segment->initprot = VM_PROT_READ | VM_PROT_EXECUTE;
+    ++header->ncmds;
+    header->sizeofcmds += sizeof(*segment);
+    memset(bytes + offset, 0xcc, PageSize);
+    for (size_t i = 0; i < count; ++i) {
+        const uint8_t jump[] {0xff, 0x25, 0, 0, 0, 0};
+        auto entry = bytes + offset + i * EntrySize;
+        memcpy(entry, jump, sizeof(jump));
+        memcpy(entry + sizeof(jump), &targets[i], sizeof(targets[i]));
+    }
+    return true;
 }
 bool preparePrelink(void *data, size_t size, uint64_t slide) {
     if (!validateFile(data, size)) return false;
