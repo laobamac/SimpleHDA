@@ -18,6 +18,7 @@ struct Module {
     size_t executableSize;
     const char * const *libraries;
     size_t libraryCount;
+    bool nativeFallback;
 };
 struct Resource { const char *name; const uint8_t *data; uint32_t size; };
 struct Translation { const char *key, *value; };

@@ -43,8 +43,10 @@ def sha(data):
 
 entries = []
 order = ['IOHDAFamily', 'AppleHDAController', 'DspFuncLib', 'AppleHDAHardwareConfigDriver']
-bundles = [source / 'Contents/PlugIns' / (name + '.kext') for name in order] + [source]
-for bundle in bundles:
+dsp_source = root / 'Resources/GoldenGate'
+bundles = [(dsp_source / (name + '.kext'), True) for name in ('OSvKernDSPLib', 'vecLib')]
+bundles += [(source / 'Contents/PlugIns' / (name + '.kext'), False) for name in order] + [(source, False)]
+for bundle, native_fallback in bundles:
     info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
     original = bundle / 'Contents/MacOS' / info['CFBundleExecutable']
     raw = original.read_bytes()
@@ -58,7 +60,8 @@ for bundle in bundles:
         thin.unlink()
     if raw[:4] != b'\xcf\xfa\xed\xfe':
         raise SystemExit(f'Unsupported Mach-O: {original}')
-    rel = 'AppleHDA.kext' + ('/' + str(bundle.relative_to(source)) if bundle != source else '')
+    rel = (str(bundle.relative_to(dsp_source)) if native_fallback else
+           'AppleHDA.kext' + ('/' + str(bundle.relative_to(source)) if bundle != source else ''))
     info['_PrelinkBundlePath'] = '/EFI/OC/Kexts/SimpleHDA.kext/Contents/Resources/Payload/' + rel
     info['_PrelinkExecutableRelativePath'] = 'Contents/MacOS/' + info['CFBundleExecutable']
     plistdata = plistlib.dumps(info, fmt=plistlib.FMT_XML) + b'\0'
@@ -66,8 +69,8 @@ for bundle in bundles:
     libraries = info.get('OSBundleLibraries_x86_64', info.get('OSBundleLibraries', {}))
     libname = f'shda_libraries_{len(entries)}'
     cpp.append(f'static const char * const {libname}[] = {{' + ','.join(json.dumps(k) for k in libraries) + '};')
-    entries.append('{' + ', '.join([json.dumps(info['CFBundleIdentifier']), json.dumps(rel), f'reinterpret_cast<const char *>({ps})', es, str(len(raw)), libname, str(len(libraries))]) + '}')
-    manifest['modules'].append({'identifier': info['CFBundleIdentifier'], 'version': info['CFBundleVersion'], 'source': str(original.relative_to(source)), 'x86_64_sha256': sha(raw), 'size': len(raw), 'libraries': info.get('OSBundleLibraries_x86_64', info.get('OSBundleLibraries', {}))})
+    entries.append('{' + ', '.join([json.dumps(info['CFBundleIdentifier']), json.dumps(rel), f'reinterpret_cast<const char *>({ps})', es, str(len(raw)), libname, str(len(libraries)), str(native_fallback).lower()]) + '}')
+    manifest['modules'].append({'identifier': info['CFBundleIdentifier'], 'version': info['CFBundleVersion'], 'source': str(original.relative_to(dsp_source if native_fallback else source)), 'native_fallback': native_fallback, 'x86_64_sha256': sha(raw), 'size': len(raw), 'libraries': info.get('OSBundleLibraries_x86_64', info.get('OSBundleLibraries', {}))})
 res = []
 for p in sorted((source / 'Contents/Resources').glob('*.xml.zlib')):
     raw = p.read_bytes()

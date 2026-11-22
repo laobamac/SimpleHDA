@@ -26,7 +26,7 @@ OpenCore injection · Native audio stack · Automatic HAL detection · Localized
 
 SimpleHDA restores the original AppleHDA through OpenCore so AppleALC can use your existing audio configuration.
 
-On macOS 27, keep `OSvKernDSPLib` and `vecLib` in the target system’s auxiliary kernel collection (AuxKC).
+On macOS 27, SimpleHDA uses the system copies of `OSvKernDSPLib` and `vecLib` when available. It loads any missing library from `SimpleHDA.kext` in memory, so no separate installation or kernel collection rebuild is required.
 
 ## Requirements
 

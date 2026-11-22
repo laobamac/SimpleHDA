@@ -1,0 +1,13 @@
+{
+  "source": "macOS Tahoe 26.7.3 (25G416), SystemKernelExtensions.kc, x86_64",
+  "source_uuids": {
+    "com.apple.kext.OSvKernDSPLib": "3E3500BF-69DB-30A6-B1A9-E777E57B4595",
+    "com.apple.vecLib.kext": "03FC713A-F1AE-3D4D-819D-6D0C207D9086"
+  },
+  "files": {
+    "OSvKernDSPLib.kext/Contents/Info.plist": "78fdeff181f044611950a9c48e94e78fabfddafaa50f6d3bbffce5595664de98",
+    "OSvKernDSPLib.kext/Contents/MacOS/OSvKernDSPLib": "aa65ca4b6bcab42dc10dfa7dfb766a125b19a15adf7d313a69664c752c60bfcc",
+    "vecLib.kext/Contents/Info.plist": "5f901b5daf5693fe0f482c801fb6b868e1bc3d24f0d1cff294e8f4d88bfa3304",
+    "vecLib.kext/Contents/MacOS/vecLib": "dc81357f8d9f5a682dfdb87f112c86922fa221b85bcfb9a2881a22a16127930a"
+  }
+}

@@ -70,11 +70,13 @@ constexpr auto GoldenGate = static_cast<KernelVersion>(27);
 constexpr char legacyNVRAM[] = "com.apple.driver.AppleEFINVRAM";
 constexpr char dspLibrary[] = "com.apple.driver.DspFuncLib";
 constexpr char audioFamily[] = "com.apple.iokit.IOAudioFamily";
+constexpr char mathLibrary[] = "com.apple.kec.Libm";
+constexpr char vectorLibrary[] = "com.apple.vecLib.kext";
 
 const char *nativeIDs[] {
     "com.apple.kernel", "com.apple.iokit.IOPCIFamily", legacyNVRAM,
     audioFamily, "com.apple.iokit.IOGraphicsFamily",
-    "com.apple.iokit.IONDRVSupport", "com.apple.kext.OSvKernDSPLib", "com.apple.vecLib.kext"
+    "com.apple.iokit.IONDRVSupport"
 };
 struct Dependency {
     const char *id {};
@@ -271,32 +273,38 @@ bool kernelDataAddress(uintptr_t address, size_t length) {
     }
     return false;
 }
+bool addNative(const char *id, const mach_header_64 *header, bool load = true) {
+    if (load) {
+        state("native-loading", id);
+        auto result = loadImage(id, false, true, 0, 2, nullptr);
+        if (result != kOSReturnSuccess) {
+            IOLog("SimpleHDA: native load %s error=0x%x\n", id, result);
+            state("native-load-failed", id);
+            return false;
+        }
+    }
+    state("native-snapshot", id);
+    if (addDependency(id, header)) return true;
+    state("native-snapshot-failed", id);
+    return false;
+}
 bool run() {
+    if (shda::moduleCount > sizeof(resident) / sizeof(resident[0])) { state("payload-limit-exceeded"); return false; }
     for (size_t i = 0; i < shda::moduleCount; ++i) {
+        if (shda::modules[i].nativeFallback) continue;
         auto previous = lookupImage(shda::modules[i].identifier);
         if (previous.value || isLoaded(shda::modules[i].identifier) || findNative(shda::modules[i].identifier)) {
             state("existing-stack", shda::modules[i].identifier);
             return false;
         }
     }
-    if (shda::moduleCount > 8) { state("payload-limit-exceeded"); return false; }
     shda::configureLocalization();
     if (!shda::initializeResources({kextLock, retainCallbackOwner, canDeliver, releaseCallbackOwner})) { state("resource-init-failed"); return false; }
     const bool goldenGate = getKernelVersion() == GoldenGate;
     shda::Buffer *localizationSource = nullptr;
     for (size_t i = 0; i < sizeof(nativeIDs) / sizeof(nativeIDs[0]); ++i) {
         if (goldenGate && !strcmp(nativeIDs[i], legacyNVRAM)) continue;
-        if (i) {
-            state("native-loading", nativeIDs[i]);
-            auto result = loadImage(nativeIDs[i], false, true, 0, 2, nullptr);
-            if (result != kOSReturnSuccess) {
-                IOLog("SimpleHDA: native load %s error=0x%x\n", nativeIDs[i], result);
-                state("native-load-failed", nativeIDs[i]);
-                return false;
-            }
-        }
-        state("native-snapshot", nativeIDs[i]);
-        if (!addDependency(nativeIDs[i], findNative(nativeIDs[i]))) { state("native-snapshot-failed", nativeIDs[i]); return false; }
+        if (!addNative(nativeIDs[i], findNative(nativeIDs[i]), i != 0)) return false;
         if (!strcmp(nativeIDs[i], audioFamily)) localizationSource = &dependencies[dependencyCount - 1].buffer;
     }
     if (!localizationSource) { state("localization-source-missing"); return false; }
@@ -329,6 +337,22 @@ bool run() {
     bool success = true;
     for (size_t m = 0; m < shda::moduleCount; ++m) {
         auto &module = shda::modules[m];
+        if (module.nativeFallback) {
+            if (auto native = findNative(module.identifier)) {
+                if (!addNative(module.identifier, native)) { success = false; break; }
+                continue;
+            }
+            auto previous = lookupImage(module.identifier);
+            if (!goldenGate || previous.value || isLoaded(module.identifier)) {
+                state("native-snapshot-failed", module.identifier);
+                success = false;
+                break;
+            }
+            if (!strcmp(module.identifier, vectorLibrary) && !addNative(mathLibrary, findNative(mathLibrary))) {
+                success = false;
+                break;
+            }
+        }
         state("linking", module.identifier);
         shda::Buffer file {static_cast<uint8_t *>(IOMalloc(module.executableSize)), module.executableSize};
         if (!file.data) { state("out-of-memory"); success = false; break; }

@@ -14,4 +14,6 @@ Copyright © 2026 laobamac. All rights reserved. Third-party components retain t
 - MacKernelSDK and the SDK headers retain their original licenses and copyright.
 - `Resources/AppleHDA.kext` contains original AppleHDA 600.2 binaries, resources, translations and the signed legacy HAL plug-in from macOS 15.8 KDK 24H23. These remain Apple's proprietary components, subject to Apple's applicable terms.
 
+The x86_64 `OSvKernDSPLib` and `vecLib` binaries in `Resources/GoldenGate` were recovered from the macOS Tahoe 26.7.3 kernel collection. They remain Apple proprietary components. `Resources/GoldenGate.json` records their source UUIDs and file hashes.
+
 Dependency revisions are pinned in `VendorVersions.json`. Original AppleHDA file hashes are recorded in `Resources/AppleHDA.json`; the build verifies them before generating the embedded payload.

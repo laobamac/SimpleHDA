@@ -26,7 +26,7 @@ OpenCore 注入 · 原版音频栈 · HAL 自动检测 · 设备名称本地化
 
 SimpleHDA 通过 OpenCore 恢复原版 AppleHDA，让 AppleALC 继续使用现有的声卡配置。
 
-macOS 27 需要在目标系统的辅助内核集合（AuxKC）中保留 `OSvKernDSPLib` 和 `vecLib`。
+在 macOS 27 上，SimpleHDA 优先使用系统已有的 `OSvKernDSPLib` 和 `vecLib`。缺少时从 `SimpleHDA.kext` 内存加载，无需另外安装这两个库或重建内核集合。
 
 ## 要求
 

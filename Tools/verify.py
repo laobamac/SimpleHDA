@@ -36,6 +36,10 @@ if args.source:
     for name in ('AppleHDA.kext', 'AppleHDA.kext/Contents/PlugIns/AppleHDAHALPlugIn.bundle'):
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(root / 'Resources' / name)], check=True)
     print(f'Verified original AppleHDA payload: {len(paths)} files')
+    dsp_root = root / 'Resources/GoldenGate'
+    dsp = json.loads(dsp_root.with_suffix('.json').read_text())
+    for name, expected in dsp['files'].items():
+        require(hashlib.sha256((dsp_root / name).read_bytes()).hexdigest() == expected, f'DSP checksum differs: {name}')
 if args.configuration:
     bundle = root / 'Build' / args.configuration / 'SimpleHDA.kext'
     info = plistlib.loads((bundle / 'Contents/Info.plist').read_bytes())
@@ -50,6 +54,10 @@ if args.configuration:
     require(struct.unpack_from('<I', data, 4)[0] == 0x1000007, 'Expected x86_64')
     require(struct.unpack_from('<I', data, 12)[0] == 0xb, 'Expected kernel extension')
     require(b'cn.laobamac.SimpleHDA\0' in data and version.encode() + b'\0' in data, 'Missing kmod metadata')
+    dsp_root = root / 'Resources/GoldenGate'
+    for name in ('OSvKernDSPLib', 'vecLib'):
+        payload = dsp_root / f'{name}.kext/Contents/MacOS/{name}'
+        require(payload.read_bytes() in data, f'Missing embedded DSP library: {name}')
     symbols = subprocess.check_output(['nm', '-g', str(binary)], text=True)
     for name in ('_SimpleHDA_kern_start', '_SimpleHDA_kern_stop', '_kmod_info'):
         require(any(line.split()[-1:] == [name] and ' U ' not in line for line in symbols.splitlines()), f'Missing startup symbol: {name}')
