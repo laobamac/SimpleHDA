@@ -11,7 +11,7 @@
 
 **Restore native AppleHDA on macOS Tahoe and GoldenGate**
 
-![Version](https://img.shields.io/badge/version-1.0.2-2563eb)
+![Version](https://img.shields.io/badge/version-1.0.3-2563eb)
 ![macOS](https://img.shields.io/badge/macOS-26%20%7C%2027-111827)
 ![Architecture](https://img.shields.io/badge/arch-x86__64-6b7280)
 ![OpenCore](https://img.shields.io/badge/boot-OpenCore-16a34a)
@@ -43,7 +43,7 @@ On macOS 27, SimpleHDA uses the system copies of `OSvKernDSPLib` and `vecLib` wh
 1. Download the `RELEASE` package from [Releases](https://github.com/laobamac/SimpleHDA/releases), extract it and copy `SimpleHDA.kext` to `EFI/OC/Kexts`.
 2. Add it to `Kernel → Add` in this order: **Lilu → AppleALC → SimpleHDA**. The package includes an example entry in `OpenCore-Kernel-Add.plist`.
 3. Ensure `Kernel → Quirks → DisableLinkeditJettison` is `true` and retain the working AppleALC, layout and ACPI configuration for your machine.
-4. Optionally install `SimpleHDA-HAL-1.0.2.pkg`.
+4. Optionally install `SimpleHDA-HAL-1.0.3.pkg`.
 5. Reboot.
 
 Remove other AppleHDA restoration solutions or root patches before installation to avoid loading the stack twice.
@@ -153,7 +153,7 @@ Dependencies are pinned in `VendorVersions.json`; the original payload is in `Re
 
 Each push updates the `v1.0.1-alpha` prerelease, keeping only the latest prerelease and assets. Release notes list the five most recent commits. Filenames include the short commit hash, such as `SimpleHDA-Tahoe-v1.0.1-RELEASE-alpha-abcdef0.zip`.
 
-Publishing a formal Release automatically uploads `DEBUG` and `RELEASE` packages, such as `SimpleHDA-Tahoe-v1.0.1-RELEASE.zip`. Use `1.0.2` or `v1.0.1` as the tag, matching `Info.plist`.
+Publishing a formal Release automatically uploads `DEBUG` and `RELEASE` packages, such as `SimpleHDA-Tahoe-v1.0.1-RELEASE.zip`. Use `1.0.3` or `v1.0.1` as the tag, matching `Info.plist`.
 
 ## Acknowledgments
 
