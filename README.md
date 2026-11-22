@@ -11,7 +11,7 @@
 
 **在 macOS Tahoe 和 GoldenGate 上恢复原版 AppleHDA**
 
-![Version](https://img.shields.io/badge/version-1.0.1-2563eb)
+![Version](https://img.shields.io/badge/version-1.0.2-2563eb)
 ![macOS](https://img.shields.io/badge/macOS-26%20%7C%2027-111827)
 ![Architecture](https://img.shields.io/badge/arch-x86__64-6b7280)
 ![OpenCore](https://img.shields.io/badge/boot-OpenCore-16a34a)
@@ -43,7 +43,7 @@ SimpleHDA 通过 OpenCore 恢复原版 AppleHDA，让 AppleALC 继续使用现�
 1. 在 [Releases](https://github.com/laobamac/SimpleHDA/releases) 下载并解压 `RELEASE` 包，将 `SimpleHDA.kext` 放入 `EFI/OC/Kexts`。
 2. 在 `Kernel → Add` 添加驱动，顺序为 **Lilu → AppleALC → SimpleHDA**。包内附有 `OpenCore-Kernel-Add.plist` 条目示例。
 3. 确认 `Kernel → Quirks → DisableLinkeditJettison` 为 `true`，保留这台机器原先有效的 AppleALC、layout 和 ACPI 配置。
-4. 可选：安装 `SimpleHDA-HAL-1.0.1.pkg`。
+4. 可选：安装 `SimpleHDA-HAL-1.0.2.pkg`。
 5. 重启。
 
 使用前卸载其他 AppleHDA 恢复方案或根补丁，避免重复加载。
@@ -153,7 +153,7 @@ python3 Tools/package.py
 
 推送自动更新 `v1.0.1-alpha` 预发布，只保留最新预发布及附件。发布说明列出最近 5 条提交，文件名包含提交短哈希，例如 `SimpleHDA-Tahoe-v1.0.1-RELEASE-alpha-abcdef0.zip`。
 
-发布正式 Release 后自动上传 `DEBUG`、`RELEASE` 包，例如 `SimpleHDA-Tahoe-v1.0.1-RELEASE.zip`；tag 使用与 `Info.plist` 一致的 `1.0.1` 或 `v1.0.1`。
+发布正式 Release 后自动上传 `DEBUG`、`RELEASE` 包，例如 `SimpleHDA-Tahoe-v1.0.1-RELEASE.zip`；tag 使用与 `Info.plist` 一致的 `1.0.2` 或 `v1.0.1`。
 
 ## 致谢
 
